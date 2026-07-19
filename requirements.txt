@@ -3,3 +3,8 @@ numpy
 pandas
 matplotlib
 scikit-learn
+tensorflow
+imbalanced-learn
+category-encoders
+scipy
+joblib
