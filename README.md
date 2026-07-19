@@ -156,11 +156,10 @@ The application will open automatically in your browser.
 ---
 
 ## Contributors
-
-- Anshika Kumawat
-- Khushi Rani
--Shivani Kumari
--samridhi Kumari
+Anshika Kumawat
+Khushi Rani
+Shivani Kumari
+Samridhi Kumari
 ---
 
 ## Future Improvements
