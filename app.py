@@ -11,11 +11,32 @@ from customer_analytics.segmentation_engines import render as render_clustering
 from forecasting_engine.time_series import render as render_forecasting
 
 
+from customer_analytics.sequence_models import (
+    build_lstm,
+    build_gru,
+    anomaly_detection
+)
+
+from core_pipeline.transformation_pipes import (
+    create_lag_features,
+    apply_smote,
+    target_encoding,
+    preprocess_pipeline
+)
+
 st.set_page_config(page_title="Neural Network Dashboard", layout="wide")
 
 st.title("Enterprise AI Platform")
 st.subheader("Neural Network Dashboard")
 st.caption("Perceptron & MLP implemented from scratch using NumPy")
+tab_nn, tab_sequence, tab_feature, tab_cluster, tab_forecast = st.tabs(
+    [
+        "Neural Network",
+        "Sequence Models",
+        "Feature Engineering",
+        "Customer Segmentation",
+        "Demand Forecasting",
+    ]
 tab_nn, tab_cluster, tab_forecast = st.tabs(
     ["Neural Network", "Customer Segmentation", "Demand Forecasting"]
 )
@@ -34,6 +55,42 @@ with tab_nn:
     activation_name = st.sidebar.selectbox("Activation", ["Sigmoid", "ReLU", "Tanh"])
     lr = st.sidebar.slider("Learning Rate", 0.001, 1.0, 0.1, step=0.001)
     epochs = st.sidebar.slider("Epochs", 10, 500, 100, step=10)
+
+    if model_type == "MLP":
+        hidden_neurons = st.sidebar.slider("Hidden Neurons", 2, 64, 8)
+
+    train_btn = st.sidebar.button("Train Model")
+
+
+    def load_data():
+        if data_source == "Built-in Dataset":
+            if dataset_name == "Synthetic Binary":
+                X, y = make_classification(n_samples=400, n_features=4, n_informative=3,
+                                            n_redundant=0, random_state=42)
+                cols = [f"feature_{i}" for i in range(X.shape[1])]
+            elif dataset_name == "Two Moons":
+                X, y = make_moons(n_samples=400, noise=0.2, random_state=42)
+                cols = ["feature_0", "feature_1"]
+            else:
+                iris = load_iris()
+                mask = iris.target != 2
+                X, y = iris.data[mask], iris.target[mask]
+                cols = iris.feature_names
+            return X, y, cols
+        else:
+            if uploaded_file is None:
+                return None, None, None
+            df = pd.read_csv(uploaded_file)
+            X = df.iloc[:, :-1].values
+            y = df.iloc[:, -1].values
+            if y.dtype == object:
+                y = pd.factorize(y)[0]
+            cols = list(df.columns[:-1])
+            return X, y, cols
+
+
+    X, y, cols = load_data()
+
 
     if model_type == "MLP":
         hidden_neurons = st.sidebar.slider("Hidden Neurons", 2, 64, 8)
@@ -130,8 +187,128 @@ with tab_nn:
                 })
         else:
             st.info("click Train Model.")
+            
 
-    st.markdown("---")
+with tab_sequence:
+
+    st.header("Sequence Models")
+
+    model_choice = st.selectbox(
+        "Choose Model",
+        ["LSTM", "GRU"]
+    )
+
+    st.info("Example input shape: (10 timesteps, 5 features)")
+
+    timesteps = st.number_input(
+        "Timesteps",
+        min_value=1,
+        value=10
+    )
+
+    features = st.number_input(
+        "Features",
+        min_value=1,
+        value=5
+    )
+
+    if st.button("Build Sequence Model"):
+
+        input_shape = (timesteps, features)
+
+        if model_choice == "LSTM":
+
+            model = build_lstm(input_shape)
+
+            st.success("LSTM Model Created Successfully")
+
+        else:
+
+            model = build_gru(input_shape)
+
+            st.success("GRU Model Created Successfully")
+
+        model.summary()
+            
+with tab_feature:
+
+    st.header("Feature Engineering")
+
+    uploaded = st.file_uploader(
+        "Upload CSV",
+        type=["csv"]
+    )
+
+    if uploaded is not None:
+
+        df = pd.read_csv(uploaded)
+
+        st.write(df.head())
+
+        operation = st.selectbox(
+            "Select Operation",
+            [
+                "Lag Features",
+                "Target Encoding",
+                "SMOTE"
+            ]
+        )
+
+        if operation == "Lag Features":
+
+            column = st.selectbox(
+                "Column",
+                df.columns
+            )
+
+            st.write(create_lag_features(df.copy(), column))
+
+        elif operation == "Target Encoding":
+
+            cat = st.selectbox(
+                "Category Column",
+                df.columns
+            )
+
+            target = st.selectbox(
+                "Target Column",
+                df.columns
+            )
+
+            st.write(target_encoding(df.copy(), cat, target))
+
+        elif operation == "SMOTE":
+
+            st.info("Select X and y columns for SMOTE")
+    
+            
+st.markdown("---")
+
+st.subheader("Anomaly Detection")
+
+uploaded_anomaly = st.file_uploader(
+    "Upload CSV for Anomaly Detection",
+    type=["csv"],
+    key="anomaly"
+)
+
+if uploaded_anomaly is not None:
+
+    df = pd.read_csv(uploaded_anomaly)
+
+    st.dataframe(df.head())
+
+    if st.button("Detect Anomalies"):
+
+        prediction = anomaly_detection(df)
+
+        df["Prediction"] = prediction
+
+        st.write(df)
+
+        st.success("Anomaly Detection Completed")
+        
+    
     st.caption("Implemented By: TechyGirl")
 
     with tab_cluster:
