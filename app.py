@@ -10,6 +10,7 @@ from customer_analytics.neural_nets import Perceptron, MLP
 from customer_analytics.segmentation_engines import render as render_clustering
 from forecasting_engine.time_series import render as render_forecasting
 
+
 from customer_analytics.sequence_models import (
     build_lstm,
     build_gru,
@@ -36,6 +37,8 @@ tab_nn, tab_sequence, tab_feature, tab_cluster, tab_forecast = st.tabs(
         "Customer Segmentation",
         "Demand Forecasting",
     ]
+tab_nn, tab_cluster, tab_forecast = st.tabs(
+    ["Neural Network", "Customer Segmentation", "Demand Forecasting"]
 )
 
 with tab_nn:
@@ -52,6 +55,42 @@ with tab_nn:
     activation_name = st.sidebar.selectbox("Activation", ["Sigmoid", "ReLU", "Tanh"])
     lr = st.sidebar.slider("Learning Rate", 0.001, 1.0, 0.1, step=0.001)
     epochs = st.sidebar.slider("Epochs", 10, 500, 100, step=10)
+
+    if model_type == "MLP":
+        hidden_neurons = st.sidebar.slider("Hidden Neurons", 2, 64, 8)
+
+    train_btn = st.sidebar.button("Train Model")
+
+
+    def load_data():
+        if data_source == "Built-in Dataset":
+            if dataset_name == "Synthetic Binary":
+                X, y = make_classification(n_samples=400, n_features=4, n_informative=3,
+                                            n_redundant=0, random_state=42)
+                cols = [f"feature_{i}" for i in range(X.shape[1])]
+            elif dataset_name == "Two Moons":
+                X, y = make_moons(n_samples=400, noise=0.2, random_state=42)
+                cols = ["feature_0", "feature_1"]
+            else:
+                iris = load_iris()
+                mask = iris.target != 2
+                X, y = iris.data[mask], iris.target[mask]
+                cols = iris.feature_names
+            return X, y, cols
+        else:
+            if uploaded_file is None:
+                return None, None, None
+            df = pd.read_csv(uploaded_file)
+            X = df.iloc[:, :-1].values
+            y = df.iloc[:, -1].values
+            if y.dtype == object:
+                y = pd.factorize(y)[0]
+            cols = list(df.columns[:-1])
+            return X, y, cols
+
+
+    X, y, cols = load_data()
+
 
     if model_type == "MLP":
         hidden_neurons = st.sidebar.slider("Hidden Neurons", 2, 64, 8)
