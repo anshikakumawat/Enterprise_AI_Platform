@@ -132,7 +132,7 @@ with tab_nn:
             st.info("click Train Model.")
 
     st.markdown("---")
-    st.caption("Implemented By: Anshika Kumawat")
+    st.caption("Implemented By: TechyGirl")
 
     with tab_cluster:
         render_clustering()
